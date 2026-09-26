@@ -1,0 +1,122 @@
+version: '3.8'
+
+# ==============================================================================
+# BhashaSetu — AI Vernacular Pedagogy Platform (SIH26042)
+# 100% Free & Open-Source Stack Orchestration
+# ==============================================================================
+# Deployment Note: The entire stack can run locally or on a single free-tier VM
+# for demo/hackathon evaluations, and maps 1:1 to Kubernetes (K3s/EKS) for national production.
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Frontend Web & PWA Layer (Next.js 14)
+  # ----------------------------------------------------------------------------
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    container_name: bhashasetu-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=production
+    depends_on:
+      - api-gateway
+    restart: always
+
+  # ----------------------------------------------------------------------------
+  # 2. AI Gateway & Microservices (FastAPI Python Engine)
+  # ----------------------------------------------------------------------------
+  api-gateway:
+    build:
+      context: ../services/api
+      dockerfile: Dockerfile
+    container_name: bhashasetu-ai-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://bhasha_user:bhasha_pass@postgres:5432/bhashasetu
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+      - MINIO_ENDPOINT=http://minio:9000
+    depends_on:
+      - postgres
+      - redis
+      - qdrant
+    restart: always
+
+  # ----------------------------------------------------------------------------
+  # 3. Data & Storage Layer (All FOSS)
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: bhashasetu-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=bhasha_user
+      - POSTGRES_PASSWORD=bhasha_pass
+      - POSTGRES_DB=bhashasetu
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: bhashasetu-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: bhashasetu-vector-db
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: always
+
+  minio:
+    image: minio/minio:latest
+    container_name: bhashasetu-object-storage
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=bhasha_admin
+      - MINIO_ROOT_PASSWORD=bhasha_secret_key
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    restart: always
+
+  # ----------------------------------------------------------------------------
+  # 4. Identity & Single Sign-On (Keycloak)
+  # ----------------------------------------------------------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: bhashasetu-auth
+    ports:
+      - "8080:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin_password
+      - DB_VENDOR=postgres
+      - DB_ADDR=postgres
+      - DB_DATABASE=bhashasetu
+      - DB_USER=bhasha_user
+      - DB_PASSWORD=bhasha_pass
+    command: start-dev
+    depends_on:
+      - postgres
+    restart: always
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+  minio_data:

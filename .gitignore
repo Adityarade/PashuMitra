@@ -1,0 +1,40 @@
+# Node
+node_modules/
+dist/
+.next/
+out/
+build/
+.npm/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# OS Files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,28 @@
+{
+  "name": "bhashasetu-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BhashaSetu — AI Vernacular Pedagogy & Real-Time Translation Platform (SIH26042)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace=apps/web run dev",
+    "build:web": "npm --workspace=apps/web run build",
+    "start:web": "npm --workspace=apps/web run start",
+    "dev:api": "cd services/api && python -m uvicorn main:app --reload --port 8000",
+    "start": "npm run dev:web"
+  },
+  "keywords": [
+    "sih2026",
+    "vernacular-education",
+    "nep2020",
+    "ai4bharat",
+    "bhashini",
+    "multilingual-pedagogy",
+    "real-time-translation"
+  ],
+  "author": "BhashaSetu Team",
+  "license": "MIT"
+}

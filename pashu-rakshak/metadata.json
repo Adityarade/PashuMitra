@@ -1,0 +1,6 @@
+{
+  "name": "PashuRakshak - Field Bio-Surveillance & Telemetry Ops",
+  "description": "Tactical bio-surveillance, livestock disease triage, outbreak containment radar, and real-time epizootic telemetry command system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

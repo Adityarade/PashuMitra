@@ -1,12 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   MapPin, Activity, FileText, Target,
   Shield, Plus, RadioTower, LogOut, User,
-  Globe, ChevronDown, Home
+  Globe, ChevronDown, Home, Camera, Upload,
+  Trash2, Check, X, Edit3, BadgeCheck
 } from 'lucide-react';
 import { useLang } from '../context/LangContext';
 import AIPashuSahayak from './AIPashuSahayak';
+
+export interface UserProfile {
+  name: string;
+  role: string;
+  phone: string;
+  district: string;
+  badgeId: string;
+  avatarUrl: string;
+}
+
+const DEFAULT_PROFILE: UserProfile = {
+  name: 'Dr. Patil',
+  role: 'Field Vet',
+  phone: '+91 98452 87192',
+  district: 'Dharwad District',
+  badgeId: 'VET-KA-2026-4401',
+  avatarUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200'
+};
+
+const PRESET_AVATARS = [
+  { label: 'Veterinarian', url: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200' },
+  { label: 'Farmer / Keeper', url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=200' },
+  { label: 'Bio-Defense Officer', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200' },
+  { label: 'Para-Vet Specialist', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200' },
+];
 
 type LangCode = 'en' | 'hi' | 'mr';
 
@@ -21,6 +47,53 @@ export default function Layout() {
   const navigate = useNavigate();
   const { lang, setLang, t } = useLang();
   const [langOpen, setLangOpen] = useState(false);
+
+  // User Profile State with LocalStorage Persistence
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    try {
+      const saved = localStorage.getItem('pashumitra_user_profile');
+      return saved ? JSON.parse(saved) : DEFAULT_PROFILE;
+    } catch {
+      return DEFAULT_PROFILE;
+    }
+  });
+
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [tempProfile, setTempProfile] = useState<UserProfile>(profile);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size should be under 5MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      if (uploadEvent.target?.result) {
+        setTempProfile(prev => ({
+          ...prev,
+          avatarUrl: uploadEvent.target!.result as string
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfile(tempProfile);
+    localStorage.setItem('pashumitra_user_profile', JSON.stringify(tempProfile));
+    setSaveSuccess(true);
+    setTimeout(() => {
+      setSaveSuccess(false);
+      setProfileModalOpen(false);
+    }, 1000);
+  };
 
   const navItems = [
     { to: '/', icon: <Home size={20} />, label: t.dashboard },
@@ -37,6 +110,178 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen bg-[#f8fafc] font-sans overflow-hidden">
+
+      {/* ── Profile Edit Modal ── */}
+      {profileModalOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] overflow-y-auto">
+
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-primary-900 to-primary-700 p-5 flex items-center justify-between sticky top-0 z-10">
+              <h2 className="font-black text-white text-lg flex items-center gap-2">
+                <Edit3 size={20} /> Edit Profile
+              </h2>
+              <button
+                onClick={() => setProfileModalOpen(false)}
+                className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="p-6 space-y-6">
+
+              {/* Photo Upload Section */}
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative">
+                  {tempProfile.avatarUrl ? (
+                    <img
+                      src={tempProfile.avatarUrl}
+                      alt="Profile"
+                      className="w-24 h-24 rounded-full object-cover border-4 border-primary-200 shadow-lg"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center border-4 border-gray-200">
+                      <User size={36} className="text-gray-400" />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute -bottom-2 -right-2 w-9 h-9 rounded-full bg-primary-700 text-white flex items-center justify-center border-2 border-white shadow-md hover:bg-primary-800 transition-colors"
+                  >
+                    <Camera size={16} />
+                  </button>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                />
+
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-xs font-bold text-primary-700 flex items-center gap-1.5 hover:text-primary-900 transition-colors"
+                  >
+                    <Upload size={14} /> Upload Custom Photo
+                  </button>
+                  <p className="text-[11px] text-gray-400">JPG, PNG up to 5MB</p>
+                  {tempProfile.avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setTempProfile(prev => ({ ...prev, avatarUrl: '' }))}
+                      className="text-[11px] text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors"
+                    >
+                      <Trash2 size={11} /> Remove Photo
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Preset Avatars Grid */}
+              <div>
+                <p className="text-xs font-bold text-gray-600 mb-2">Or choose a preset:</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {PRESET_AVATARS.map((av, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setTempProfile(prev => ({ ...prev, avatarUrl: av.url }))}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-2xl border transition-all ${
+                        tempProfile.avatarUrl === av.url
+                          ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-300'
+                          : 'border-gray-200 hover:border-gray-300 bg-gray-50'
+                      }`}
+                    >
+                      <img src={av.url} alt={av.label} className="w-12 h-12 rounded-full object-cover" />
+                      <span className="text-[10px] font-bold text-gray-600 text-center leading-tight">{av.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Profile Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-700 mb-1 block">Full Name</label>
+                  <input
+                    value={tempProfile.name}
+                    onChange={e => setTempProfile(p => ({ ...p, name: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-xl py-2.5 px-3 text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-700 mb-1 block">Role / Designation</label>
+                  <select
+                    value={tempProfile.role}
+                    onChange={e => setTempProfile(p => ({ ...p, role: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-xl py-2.5 px-3 text-sm font-bold text-gray-900 bg-white outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                  >
+                    <option>Field Vet</option>
+                    <option>District Admin</option>
+                    <option>Farmer / Keeper</option>
+                    <option>Para-Vet Officer</option>
+                    <option>Bio-Defense Officer</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-700 mb-1 block">Phone Number</label>
+                  <input
+                    value={tempProfile.phone}
+                    onChange={e => setTempProfile(p => ({ ...p, phone: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-xl py-2.5 px-3 text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-700 mb-1 block">District</label>
+                  <input
+                    value={tempProfile.district}
+                    onChange={e => setTempProfile(p => ({ ...p, district: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-xl py-2.5 px-3 text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <BadgeCheck size={14} className="text-primary-700" /> Official Badge / INAPH ID
+                  </label>
+                  <input
+                    value={tempProfile.badgeId}
+                    onChange={e => setTempProfile(p => ({ ...p, badgeId: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-xl py-2.5 px-3 text-sm font-mono font-bold text-gray-900 outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Save / Cancel Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setProfileModalOpen(false)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-2xl py-3 font-bold text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`flex-1 rounded-2xl py-3 font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
+                    saveSuccess
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-primary-800 hover:bg-primary-900 text-white'
+                  }`}
+                >
+                  {saveSuccess ? <><Check size={18} /> Saved!</> : 'Save Profile'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
 
       {/* Desktop Left Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 z-50 flex-shrink-0 shadow-md">
@@ -81,15 +326,27 @@ export default function Layout() {
           </button>
         </div>
 
-        {/* Footer Info */}
+        {/* Footer Info — dynamic profile */}
         <div className="p-4 border-t border-gray-100 bg-gray-50">
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2.5 mb-2 cursor-pointer group" onClick={() => { setTempProfile(profile); setProfileModalOpen(true); }}>
+            {profile.avatarUrl ? (
+              <img src={profile.avatarUrl} alt={profile.name} className="w-8 h-8 rounded-full object-cover border-2 border-primary-200 group-hover:border-primary-500 transition-colors flex-shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center border-2 border-primary-200 flex-shrink-0">
+                <User size={14} className="text-primary-600" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-gray-800 truncate group-hover:text-primary-700 transition-colors">{profile.name}</p>
+              <p className="text-[9px] text-gray-500 font-medium truncate">{profile.role}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mb-1">
             <MapPin size={12} className="text-primary-600 flex-shrink-0" />
-            <span className="bg-primary-50 text-primary-700 border border-primary-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-              Dharwad District
+            <span className="bg-primary-50 text-primary-700 border border-primary-200 text-[10px] font-bold px-2 py-0.5 rounded-full truncate">
+              {profile.district}
             </span>
           </div>
-          <p className="text-[10px] text-gray-500 font-medium leading-tight">Hubballi Block · Zone 4B Active</p>
           <div className="flex items-center gap-1.5 mt-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span className="text-[9px] text-emerald-600 font-bold">All Systems Online</span>
@@ -160,17 +417,47 @@ export default function Layout() {
 
               {/* Profile & Logout */}
               <div className="flex items-center gap-2 border-l border-white/20 pl-3 ml-1 relative z-30">
-                <div className="hidden sm:flex flex-col items-end">
-                  <span className="text-sm font-bold text-white leading-tight">Dr. Patil</span>
-                  <span className="text-[10px] font-bold text-emerald-300 uppercase">Field Vet</span>
-                </div>
-                <button className="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/20 hover:bg-white/20 transition-colors">
-                  <User size={18} />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTempProfile(profile);
+                    setProfileModalOpen(true);
+                  }}
+                  className="flex items-center gap-2.5 group text-left focus:outline-none cursor-pointer"
+                  title="Click to Edit Profile & Photo"
+                >
+                  <div className="hidden sm:flex flex-col items-end">
+                    <span className="text-sm font-bold text-white leading-tight group-hover:text-emerald-200 transition-colors flex items-center gap-1">
+                      {profile.name}
+                      <Edit3 size={11} className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-300" />
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-300 uppercase">
+                      {profile.role}
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    {profile.avatarUrl ? (
+                      <img
+                        src={profile.avatarUrl}
+                        alt={profile.name}
+                        className="w-9 h-9 rounded-full object-cover border-2 border-white/30 group-hover:border-emerald-400 shadow-sm transition-all"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/20 group-hover:border-emerald-400 transition-colors">
+                        <User size={18} />
+                      </div>
+                    )}
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border border-white flex items-center justify-center text-white text-[9px] shadow-sm">
+                      <Camera size={9} />
+                    </div>
+                  </div>
                 </button>
+
                 <button
                   onClick={() => navigate('/login')}
                   title={t.logout}
-                  className="w-9 h-9 rounded-xl bg-red-500/20 text-red-300 flex items-center justify-center border border-red-400/30 hover:bg-red-500/40 transition-colors"
+                  className="w-9 h-9 rounded-xl bg-red-500/20 text-red-300 flex items-center justify-center border border-red-400/30 hover:bg-red-500/40 transition-colors ml-1"
                 >
                   <LogOut size={16} />
                 </button>

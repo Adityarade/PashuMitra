@@ -1,36 +1,168 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity, FileText, Target, Plus, ShieldCheck,
   MapPin, AlertTriangle, Syringe, Bell, Wifi, TrendingUp,
-  RadioTower, Users, ClipboardList, Zap
+  RadioTower, Users, ClipboardList, Zap, CheckCircle, ShieldAlert,
+  Phone, X, RefreshCw
 } from 'lucide-react';
 import { useLang } from '../context/LangContext';
+import { api } from '../services/api';
+import type { SurveillanceStats, Incident } from '../services/api';
 
 export default function LandingDashboard() {
   const navigate = useNavigate();
   const { t } = useLang();
 
-  const alerts = [
-    { village: 'Sherewad', type: 'FMD Suspected', time: '08:12 IST', color: 'bg-red-500' },
-    { village: 'Kundagol', type: 'Quarantine Active', time: '07:45 IST', color: 'bg-amber-500' },
-    { village: 'Navalgund', type: 'Vaccination Due', time: '06:30 IST', color: 'bg-blue-500' },
-  ];
+  const [stats, setStats] = useState<SurveillanceStats>({
+    monitoredClusters: 42,
+    telemetryOnline: 100,
+    suspectedFlagsToday: 7,
+    newFlagsSince6AM: 3,
+    activeCritical: 2,
+    quarantinedFarms: 18,
+    bovineQuarantined: 14,
+    caprineQuarantined: 4,
+    immunityCoverage: 84.2,
+    activeLockdowns: 3
+  });
+
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sosModalOpen, setSosModalOpen] = useState(false);
+  const [sosSending, setSosSending] = useState(false);
+  const [sosSuccess, setSosSuccess] = useState<string | null>(null);
+  const [ivrSuccess, setIvrSuccess] = useState<string | null>(null);
+
+  const loadData = async () => {
+    try {
+      const [s, inc] = await Promise.all([
+        api.getSurveillanceStats(),
+        api.getIncidents()
+      ]);
+      setStats(s);
+      setIncidents(inc);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(loadData, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleTriggerSOS = async () => {
+    setSosSending(true);
+    try {
+      const res = await api.triggerSOS({
+        village: 'Kundgol',
+        district: 'Dharwad',
+        farmer: 'Rapid SOS Dispatcher',
+        phone: '+91 99000 88776'
+      });
+      setSosSuccess(res.message);
+      await loadData();
+      setTimeout(() => {
+        setSosSuccess(null);
+        setSosModalOpen(false);
+      }, 3000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSosSending(false);
+    }
+  };
+
+  const handleQuickIVR = async () => {
+    try {
+      const res = await api.triggerIVRBroadcast('Kundgol Village', 'HI');
+      setIvrSuccess(res.message);
+      setTimeout(() => setIvrSuccess(null), 4000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   return (
-    <div className="w-full px-4 sm:px-6 space-y-6 pb-8">
+    <div className="w-full px-4 sm:px-6 space-y-6 pb-12">
+
+      {/* ── SOS Emergency Modal ── */}
+      {sosModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-2 border-red-500 animate-fade-in-up">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center">
+                  <ShieldAlert size={28} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-gray-900">CONTAGION SOS</h3>
+                  <p className="text-xs text-red-600 font-bold uppercase tracking-wider">Emergency Outbreak Containment</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSosModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {sosSuccess ? (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-center space-y-3">
+                <CheckCircle size={36} className="text-emerald-600 mx-auto" />
+                <p className="font-black text-emerald-900 text-base">{sosSuccess}</p>
+                <p className="text-xs text-emerald-700">Digital perimeter locked. Paravet response team notified.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  Triggering Contagion SOS will immediately initialize an automatic 500-meter digital quarantine ring, dispatch emergency paravets, and send automated IVR voice alerts to all surrounding cattle owners.
+                </p>
+
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-800 space-y-1">
+                  <p className="font-bold flex items-center gap-1.5">
+                    <RadioTower size={14} /> Affected Node: Kundgol Sector 1 (Zone 4B)
+                  </p>
+                  <p className="text-[11px] text-red-700">Estimated outreach: ~1,850 farmers via IVR phone broadcast</p>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setSosModalOpen(false)}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl py-3 text-sm font-bold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleTriggerSOS}
+                    disabled={sosSending}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl py-3 text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2"
+                  >
+                    <RadioTower size={16} />
+                    {sosSending ? 'Broadcasting...' : 'ACTIVATE SOS NOW'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Hero Section ── */}
       <div className="relative rounded-3xl overflow-hidden shadow-2xl min-h-[340px]">
-
-        {/* Background image — much more visible */}
+        {/* Background image */}
         <img
           src="https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&q=80&w=1400"
           alt="Livestock Background"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        {/* Dark amber/teal overlay so image stays visible but text is readable */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/55 to-transparent" />
+        {/* Dark overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-transparent" />
 
         <div className="relative z-10 p-6 md:p-10 flex flex-col lg:flex-row lg:items-center gap-8">
 
@@ -64,8 +196,8 @@ export default function LandingDashboard() {
                 <MapPin size={16} /> {t.viewFeed}
               </button>
               <button
-                onClick={() => navigate('/report')}
-                className="bg-red-500/80 hover:bg-red-500 text-white px-6 py-3.5 rounded-xl font-bold flex items-center gap-2 shadow-xl transition-all active:scale-95 text-sm"
+                onClick={() => setSosModalOpen(true)}
+                className="bg-red-600 hover:bg-red-500 text-white px-6 py-3.5 rounded-xl font-bold flex items-center gap-2 shadow-xl transition-all active:scale-95 text-sm animate-pulse"
               >
                 <RadioTower size={16} /> Contagion SOS
               </button>
@@ -84,45 +216,70 @@ export default function LandingDashboard() {
           </div>
 
           {/* Right — Stats Panel */}
-          <div className="flex-shrink-0 grid grid-cols-2 gap-3 w-full lg:w-[320px]">
-            {[
-              { label: t.monitored, value: '42', sub: '↑ 100% online', color: 'text-emerald-300' },
-              { label: t.suspectedFlags, value: '7', sub: '↑ +3 since 06:00', color: 'text-red-300' },
-              { label: t.quarantinedFarms, value: '18', sub: 'Bovine 14 · Caprine 4', color: 'text-white' },
-              { label: t.immunityCoverage, value: '84%', sub: '', color: 'text-white', bar: true },
-            ].map((s, i) => (
-              <div key={i} className="bg-black/30 backdrop-blur-md border border-white/15 rounded-2xl p-4">
-                <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-1">{s.label}</p>
-                <p className={`text-3xl font-black ${s.color}`}>{s.value}</p>
-                {s.bar
-                  ? <div className="w-full bg-white/20 h-1.5 rounded-full mt-2"><div className="bg-emerald-400 h-full rounded-full" style={{ width: '84%' }} /></div>
-                  : <p className={`text-[10px] font-bold mt-1 ${s.color}`}>{s.sub}</p>
-                }
+          <div className="flex-shrink-0 grid grid-cols-2 gap-3 w-full lg:w-[340px]">
+            <div className="bg-black/40 backdrop-blur-md border border-white/15 rounded-2xl p-4">
+              <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-1">{t.monitored}</p>
+              <p className="text-3xl font-black text-emerald-300">{stats.monitoredClusters}</p>
+              <p className="text-[10px] font-bold mt-1 text-emerald-400">↑ {stats.telemetryOnline}% online</p>
+            </div>
+
+            <div className="bg-black/40 backdrop-blur-md border border-white/15 rounded-2xl p-4">
+              <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-1">{t.suspectedFlags}</p>
+              <p className="text-3xl font-black text-red-400">{stats.suspectedFlagsToday}</p>
+              <p className="text-[10px] font-bold mt-1 text-red-300">↑ +{stats.newFlagsSince6AM} today</p>
+            </div>
+
+            <div className="bg-black/40 backdrop-blur-md border border-white/15 rounded-2xl p-4">
+              <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-1">{t.quarantinedFarms}</p>
+              <p className="text-3xl font-black text-white">{stats.quarantinedFarms}</p>
+              <p className="text-[10px] font-bold mt-1 text-gray-300">Bovine {stats.bovineQuarantined} · Caprine {stats.caprineQuarantined}</p>
+            </div>
+
+            <div className="bg-black/40 backdrop-blur-md border border-white/15 rounded-2xl p-4">
+              <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-1">{t.immunityCoverage}</p>
+              <p className="text-3xl font-black text-white">{stats.immunityCoverage}%</p>
+              <div className="w-full bg-white/20 h-1.5 rounded-full mt-2">
+                <div className="bg-emerald-400 h-full rounded-full" style={{ width: `${stats.immunityCoverage}%` }} />
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </div>
 
       {/* ── Live Alerts Strip ── */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <Bell size={16} className="text-red-500" />
-            <span className="font-bold text-gray-900 text-sm">Live Field Alerts</span>
-            <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">3</span>
+      <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
+            <Bell size={18} className="text-red-500" />
+            <span className="font-bold text-gray-900 text-sm sm:text-base">Live Field Telemetry & Outbreak Alerts</span>
+            <span className="bg-red-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full">
+              {incidents.length} Active
+            </span>
           </div>
-          <button className="text-xs font-bold text-primary-700 hover:underline">View All</button>
+          <button 
+            onClick={() => navigate('/admin')}
+            className="text-xs font-bold text-primary-700 hover:text-primary-900 transition-colors"
+          >
+            View Tactical Radar →
+          </button>
         </div>
-        <div className="divide-y divide-gray-50">
-          {alerts.map((a, i) => (
-            <div key={i} className="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition-colors">
-              <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${a.color}`}></span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-gray-900">{a.village}</p>
-                <p className="text-xs text-gray-500 font-medium">{a.type}</p>
+
+        <div className="divide-y divide-gray-100">
+          {incidents.slice(0, 4).map((inc) => (
+            <div key={inc.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-6 py-3.5 hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-3">
+                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${inc.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'}`} />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-gray-900">{inc.location}</p>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                      {inc.disease}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium">{inc.actionStatus} • {inc.farmer}</p>
+                </div>
               </div>
-              <span className="text-[11px] font-bold text-gray-400 flex-shrink-0">{a.time}</span>
+              <span className="text-xs font-bold text-gray-400 sm:text-right">{inc.timeAgo}</span>
             </div>
           ))}
         </div>
@@ -172,51 +329,86 @@ export default function LandingDashboard() {
         </div>
       </div>
 
-      {/* ── New Feature Rows ── */}
+      {/* ── Feature Cards Row ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
         {/* IVR Dispatch */}
-        <div className="bg-gradient-to-br from-primary-800 to-primary-900 rounded-2xl p-5 text-white shadow-md">
-          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-3">
-            <RadioTower size={22} className="text-emerald-300" />
+        <div className="bg-gradient-to-br from-primary-800 to-primary-900 rounded-3xl p-6 text-white shadow-md flex flex-col justify-between">
+          <div>
+            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
+              <RadioTower size={24} className="text-emerald-300" />
+            </div>
+            <h4 className="font-bold text-lg mb-1">IVR Mass Voice Alert</h4>
+            <p className="text-xs text-primary-200 leading-relaxed mb-4">
+              Simulate dispatching automated voice phone calls in regional languages to 1,000+ registered farmers in the high-risk perimeter.
+            </p>
           </div>
-          <h4 className="font-bold text-base mb-1">IVR Mass Alert</h4>
-          <p className="text-xs text-primary-200 leading-relaxed mb-4">Instantly dispatch voice alerts to 1,000+ farmers in a risk zone in their native language.</p>
-          <button onClick={() => navigate('/vet')} className="bg-white/15 hover:bg-white/25 border border-white/20 text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors w-full">
-            Launch Advisory →
-          </button>
+
+          <div>
+            {ivrSuccess ? (
+              <div className="bg-white/20 rounded-xl p-2.5 text-xs text-emerald-200 font-bold mb-2 text-center">
+                ✓ {ivrSuccess}
+              </div>
+            ) : null}
+            <button 
+              onClick={handleQuickIVR}
+              className="bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-3 rounded-xl text-xs font-black transition-all w-full flex items-center justify-center gap-2 shadow-lg"
+            >
+              <Phone size={14} /> Trigger Test IVR Broadcast
+            </button>
+          </div>
         </div>
 
         {/* Vaccination Tracker */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
-            <Syringe size={22} />
+        <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
+              <Syringe size={24} />
+            </div>
+            <h4 className="font-bold text-gray-900 text-lg mb-1">Vaccination Ring Tracker</h4>
+            <p className="text-xs text-gray-500 leading-relaxed mb-4">
+              Tracking herd-wide cold-chain vaccination campaigns and booster intervals across Dharwad cluster.
+            </p>
           </div>
-          <h4 className="font-bold text-gray-900 text-base mb-1">Vaccination Tracker</h4>
-          <p className="text-xs text-gray-500 leading-relaxed mb-4">Track herd-wide vaccination schedules, pending doses, and immunity progress.</p>
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs font-bold"><span className="text-gray-600">FMD Coverage</span><span className="text-indigo-600">84%</span></div>
-            <div className="w-full bg-gray-100 h-1.5 rounded-full"><div className="bg-indigo-500 h-full rounded-full" style={{ width: '84%' }} /></div>
-            <div className="flex justify-between text-xs font-bold"><span className="text-gray-600">LSD Coverage</span><span className="text-amber-600">62%</span></div>
-            <div className="w-full bg-gray-100 h-1.5 rounded-full"><div className="bg-amber-500 h-full rounded-full" style={{ width: '62%' }} /></div>
+
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-xs font-bold mb-1">
+                <span className="text-gray-700">FMD Raksha-Ovac Coverage</span>
+                <span className="text-indigo-600">84%</span>
+              </div>
+              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                <div className="bg-indigo-600 h-full rounded-full" style={{ width: '84%' }} />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-xs font-bold mb-1">
+                <span className="text-gray-700">LSD Goat Pox Heterologous</span>
+                <span className="text-amber-600">62%</span>
+              </div>
+              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                <div className="bg-amber-500 h-full rounded-full" style={{ width: '62%' }} />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Field Stats */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
-            <TrendingUp size={22} />
+        {/* Weekly Activity */}
+        <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
+            <TrendingUp size={24} />
           </div>
-          <h4 className="font-bold text-gray-900 text-base mb-3">Weekly Activity</h4>
-          <div className="space-y-2.5">
+          <h4 className="font-bold text-gray-900 text-lg mb-3">Live Network Telemetry</h4>
+          <div className="space-y-3">
             {[
-              { label: 'Reports Filed', val: '128', icon: <ClipboardList size={14} className="text-gray-400" /> },
-              { label: 'Vets Deployed', val: '14', icon: <Users size={14} className="text-gray-400" /> },
-              { label: 'Alerts Sent', val: '3,240', icon: <Zap size={14} className="text-gray-400" /> },
-              { label: 'Cases Resolved', val: '97', icon: <ShieldCheck size={14} className="text-emerald-500" /> },
+              { label: 'Reports Filed', val: '128', icon: <ClipboardList size={15} className="text-gray-400" /> },
+              { label: 'Paravets Deployed', val: '14', icon: <Users size={15} className="text-gray-400" /> },
+              { label: 'Alerts Push Delivered', val: '3,240', icon: <Zap size={15} className="text-amber-500" /> },
+              { label: 'Outbreak Perimeters Active', val: `${stats.activeCritical}`, icon: <ShieldAlert size={15} className="text-red-500" /> },
             ].map((r, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">{r.icon}{r.label}</div>
+              <div key={i} className="flex items-center justify-between pb-1.5 border-b border-gray-50 last:border-0">
+                <div className="flex items-center gap-2 text-xs text-gray-600 font-semibold">{r.icon}{r.label}</div>
                 <span className="text-sm font-black text-gray-900">{r.val}</span>
               </div>
             ))}

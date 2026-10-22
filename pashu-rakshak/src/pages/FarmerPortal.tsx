@@ -1,223 +1,186 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, Bell, FileText,
   Plus, ChevronRight, Syringe, Calendar, Phone,
-  AlertCircle, Clock
+  AlertCircle, Clock, ShieldCheck, QrCode
 } from 'lucide-react';
-import { mockAlerts, mockAdvisories } from '../data/mockData';
-import SeverityBadge from '../components/SeverityBadge';
-
-const quickActions = [
-  { label: 'Report Symptoms', labelHi: 'लक्षण रिपोर्ट करें', icon: AlertTriangle, route: '/farmer/report', color: 'from-red-500 to-rose-600', urgent: true },
-  { label: 'View Advisories', labelHi: 'सलाह देखें', icon: Bell, route: '/advisories', color: 'from-amber-500 to-orange-500', urgent: false },
-  { label: 'Vaccination Record', labelHi: 'टीकाकरण रिकॉर्ड', icon: Syringe, route: '/records', color: 'from-blue-500 to-sky-600', urgent: false },
-  { label: 'My Animals', labelHi: 'मेरे पशु', icon: FileText, route: '/records', color: 'from-green-500 to-emerald-600', urgent: false },
-];
-
-const myAnimals = [
-  { id: 'RJ-AW-001', name: 'Lakshmi', species: 'Cow (Gir)', age: '4 yrs', status: 'healthy', nextVax: '10 Oct' },
-  { id: 'RJ-AW-002', name: 'Kali', species: 'Buffalo', age: '6 yrs', status: 'due', nextVax: '28 Sep' },
-  { id: 'RJ-AW-003', name: 'Moti', species: 'Cow (HF)', age: '2 yrs', status: 'sick', nextVax: '15 Nov' },
-];
-
-const statusColor = {
-  healthy: 'text-green-600 bg-green-50 border-green-200',
-  due: 'text-amber-600 bg-amber-50 border-amber-200',
-  sick: 'text-red-600 bg-red-50 border-red-200',
-};
+import { useLang } from '../context/LangContext';
+import { api } from '../services/api';
+import type { AnimalProfile } from '../services/api';
 
 export default function FarmerPortal() {
   const navigate = useNavigate();
-  const [lang, setLang] = useState<'en' | 'hi'>('en');
+  const { lang, setLang, t } = useLang();
+  const [animals, setAnimals] = useState<AnimalProfile[]>([]);
 
-  const activeAlerts = mockAlerts.filter(a => a.status === 'active').slice(0, 3);
-  const advisories = mockAdvisories.slice(0, 2);
+  useEffect(() => {
+    api.getAnimals().then(data => setAnimals(data));
+  }, []);
+
+  const quickActions = [
+    { 
+      label: 'Report Symptoms', 
+      labelHi: 'लक्षण रिपोर्ट करें', 
+      labelMr: 'लक्षणे नोंदवा',
+      icon: AlertTriangle, 
+      route: '/report', 
+      color: 'from-red-500 to-rose-600', 
+      urgent: true 
+    },
+    { 
+      label: 'View Advisories', 
+      labelHi: 'सलाह देखें', 
+      labelMr: 'सल्ला पहा',
+      icon: Bell, 
+      route: '/advisories', 
+      color: 'from-amber-500 to-orange-500', 
+      urgent: false 
+    },
+    { 
+      label: 'Vaccination Record', 
+      labelHi: 'टीकाकरण रिकॉर्ड', 
+      labelMr: 'लसीकरण नोंद',
+      icon: Syringe, 
+      route: '/records', 
+      color: 'from-blue-500 to-sky-600', 
+      urgent: false 
+    },
+    { 
+      label: 'My Herd Records', 
+      labelHi: 'मेरे पशुधन', 
+      labelMr: 'माझे पशुधन',
+      icon: FileText, 
+      route: '/records', 
+      color: 'from-emerald-500 to-teal-600', 
+      urgent: false 
+    },
+  ];
+
+  const getActionLabel = (action: typeof quickActions[0]) => {
+    if (lang === 'hi') return action.labelHi;
+    if (lang === 'mr') return action.labelMr;
+    return action.label;
+  };
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
+    <div className="w-full px-4 sm:px-6 space-y-6 pb-24">
+      
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {lang === 'en' ? 'Farmer Portal' : 'किसान पोर्टल'}
+          <h1 className="text-2xl font-black text-gray-900">
+            {lang === 'hi' ? 'किसान पोर्टल' : lang === 'mr' ? 'शेतकरी पोर्टल' : 'Farmer & Livestock Portal'}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {lang === 'en' ? 'Welcome, Ramesh Kumar · Alwar, Rajasthan' : 'स्वागत है, रमेश कुमार · अलवर, राजस्थान'}
+          <p className="text-xs text-gray-500 font-medium mt-0.5">
+            {lang === 'hi' 
+              ? 'स्वागत है, रामेश्वर गौड़ा · धारवाड़, कर्नाटक' 
+              : lang === 'mr' 
+                ? 'स्वागत आहे, रामेश्वर गौडा · धारवाड, कर्नाटक' 
+                : 'Welcome, Rameshwar Gowda · Dharwad District, Karnataka'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setLang(l => l === 'en' ? 'hi' : 'en')}
-            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50"
-          >
-            {lang === 'en' ? 'हिंदी' : 'English'}
-          </button>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200">
-            <Phone size={14} className="text-amber-600" />
-            <span className="text-sm font-bold text-amber-700">Helpline: 1962</span>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200">
+            <Phone size={15} className="text-amber-700" />
+            <span className="text-xs font-black text-amber-800">Toll-Free Helpline: 1962</span>
           </div>
         </div>
       </div>
 
-      {/* Alert banner */}
-      <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-semibold text-red-800">
-            {lang === 'en' ? '⚠ FMD Outbreak Alert in Alwar Block!' : '⚠ अलवर ब्लॉक में FMD प्रकोप की चेतावनी!'}
-          </p>
-          <p className="text-xs text-red-600 mt-0.5">
-            {lang === 'en'
-              ? 'Emergency vaccination drive on 29 Sep. Report any symptoms immediately.'
-              : '29 सितंबर को आपातकालीन टीकाकरण अभियान। तुरंत किसी भी लक्षण की रिपोर्ट करें।'}
-          </p>
+      {/* Alert Banner */}
+      <div className="p-5 rounded-3xl bg-red-50 border border-red-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-start gap-3.5">
+          <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-black text-red-900">
+              {lang === 'hi' 
+                ? '⚠ कुंदगोल और ब्याहट्टी क्षेत्र में FMD प्रकोप की चेतावनी!' 
+                : lang === 'mr' 
+                  ? '⚠ कुंदगोल आणि ब्याहट्टी भागात FMD रोगाची सतर्कता!' 
+                  : '⚠ FMD Outbreak Alert Active in Kundgol & Byahatti Block!'}
+            </p>
+            <p className="text-xs text-red-700 font-medium mt-0.5">
+              {lang === 'hi'
+                ? 'आपातकालीन टीकाकरण अभियान सक्रिय है। किसी भी पशु में लार टपकने पर तुरंत रिपोर्ट करें।'
+                : lang === 'mr'
+                  ? 'तातडीचे लसीकरण सुरू आहे. जनावरांच्या तोंडात फोड आढळल्यास तात्काळ नोंदवा.'
+                  : 'Emergency ring vaccination in progress. Maintain foot-bath and report symptoms immediately.'}
+            </p>
+          </div>
         </div>
-        <button onClick={() => navigate('/farmer/report')} className="ml-auto flex-shrink-0 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors">
-          Report Now
+        <button 
+          onClick={() => navigate('/report')} 
+          className="flex-shrink-0 px-4 py-2.5 rounded-xl bg-red-600 text-white text-xs font-black hover:bg-red-700 transition-colors shadow-sm"
+        >
+          {lang === 'hi' ? 'अभी रिपोर्ट करें' : lang === 'mr' ? 'आता नोंदवा' : 'Report Symptoms Now'}
         </button>
       </div>
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {quickActions.map(({ label, labelHi, icon: Icon, route, color, urgent }) => (
-          <button
-            key={label}
-            onClick={() => navigate(route)}
-            className={`relative flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br ${color} text-white shadow-lg card-hover ${urgent ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}
-          >
-            {urgent && <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-white animate-pulse"></span>}
-            <Icon size={22} />
-            <span className="text-xs font-semibold text-center leading-tight">
-              {lang === 'en' ? label : labelHi}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* My Animals */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-card">
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-              <FileText size={16} className="text-primary-600" />
-              {lang === 'en' ? 'My Animals' : 'मेरे पशु'}
-            </h2>
-            <button className="text-xs text-primary-600 hover:underline font-medium flex items-center gap-1">
-              <Plus size={13} /> Add Animal
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {quickActions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <button
+              key={action.label}
+              onClick={() => navigate(action.route)}
+              className={`relative flex flex-col items-center gap-2.5 p-5 rounded-3xl bg-gradient-to-br ${action.color} text-white shadow-md hover:scale-[1.02] transition-transform ${action.urgent ? 'ring-2 ring-red-400 ring-offset-2' : ''}`}
+            >
+              {action.urgent && (
+                <span className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
+              )}
+              <Icon size={26} />
+              <span className="text-xs font-black text-center leading-tight">
+                {getActionLabel(action)}
+              </span>
             </button>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {myAnimals.map((a) => (
-              <div key={a.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors">
-                <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center text-lg">
-                  🐄
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-gray-900">{a.name}</p>
-                    <span className={`status-badge border text-xs ${statusColor[a.status as keyof typeof statusColor]}`}>
-                      {a.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500">{a.species} · {a.age} · ID: {a.id}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Calendar size={11} />
-                    <span>Next vax: {a.nextVax}</span>
-                  </div>
-                  {a.status === 'sick' && (
-                    <button
-                      onClick={() => navigate('/farmer/report')}
-                      className="mt-1 text-xs text-red-600 font-semibold hover:underline"
-                    >
-                      Report Symptoms →
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Summary stats */}
-        <div className="space-y-3">
-          {[
-            { label: 'Total Animals', labelHi: 'कुल पशु', value: '3', icon: '🐄', color: 'bg-green-50 border-green-200' },
-            { label: 'Vaccinations Due', labelHi: 'टीकाकरण बाकी', value: '1', icon: '💉', color: 'bg-amber-50 border-amber-200' },
-            { label: 'Active Reports', labelHi: 'सक्रिय रिपोर्ट', value: '1', icon: '🔴', color: 'bg-red-50 border-red-200' },
-            { label: 'Health Score', labelHi: 'स्वास्थ्य स्कोर', value: '72%', icon: '📈', color: 'bg-blue-50 border-blue-200' },
-          ].map((s) => (
-            <div key={s.label} className={`p-3 rounded-xl border ${s.color} flex items-center gap-3`}>
-              <span className="text-2xl">{s.icon}</span>
-              <div>
-                <p className="text-xs text-gray-500">{lang === 'en' ? s.label : s.labelHi}</p>
-                <p className="text-xl font-bold text-gray-900">{s.value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      {/* Active alerts nearby */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-card">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-            <AlertTriangle size={16} className="text-red-500" />
-            {lang === 'en' ? 'Disease Alerts Near You' : 'आपके पास रोग की चेतावनियाँ'}
-          </h2>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-medium border border-red-200">
-            {activeAlerts.length} Active
-          </span>
-        </div>
-        <div className="divide-y divide-gray-50">
-          {activeAlerts.map((alert) => (
-            <div key={alert.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors">
-              <SeverityBadge severity={alert.severity} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">{alert.title}</p>
-                <p className="text-xs text-gray-500">{alert.location.village}, {alert.location.block} · {alert.affectedAnimals} animals</p>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-gray-400 flex-shrink-0">
-                <Clock size={11} />
-                <span>2h ago</span>
-              </div>
-              <ChevronRight size={14} className="text-gray-300" />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Advisories */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-card">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-            <Bell size={16} className="text-amber-500" />
-            {lang === 'en' ? 'Latest Advisories' : 'नवीनतम सलाह'}
-          </h2>
-          <button onClick={() => navigate('/advisories')} className="text-xs text-primary-600 hover:underline font-medium">
-            View all
+      {/* Registered Herd Livestock */}
+      <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm space-y-4">
+        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+          <h3 className="font-bold text-gray-900 text-base flex items-center gap-2">
+            <FileText size={18} className="text-primary-700" />
+            {lang === 'hi' ? 'मेरे पंजीकृत पशु' : lang === 'mr' ? 'माझे नोंदणीकृत पशु' : 'My Registered Livestock'}
+          </h3>
+          <button 
+            onClick={() => navigate('/records')}
+            className="text-xs font-bold text-primary-800 hover:text-primary-900"
+          >
+            {lang === 'hi' ? 'सभी देखें →' : lang === 'mr' ? 'सर्व पहा →' : 'View All Records →'}
           </button>
         </div>
-        <div className="divide-y divide-gray-50">
-          {advisories.map((adv) => (
-            <div key={adv.id} className="p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-gray-900">
-                    {lang === 'en' ? adv.title : adv.titleHi}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                    {lang === 'en' ? adv.body : adv.bodyHi}
-                  </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {animals.map((a) => (
+            <div key={a.id} className="p-4 rounded-2xl border border-gray-200 bg-gray-50 flex items-center gap-3.5 hover:bg-gray-100/80 transition-colors">
+              <img 
+                src={a.imageUrl || "https://images.unsplash.com/photo-1546445317-29f4545e9d53?auto=format&fit=crop&q=80&w=100"} 
+                alt={a.name} 
+                className="w-14 h-14 rounded-xl object-cover border border-gray-200"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-black text-gray-900 text-sm truncate">{a.name}</h4>
+                  <span className="text-[10px] font-mono font-bold text-gray-500">#{a.tagId.slice(-6)}</span>
                 </div>
-                <SeverityBadge severity={adv.severity} />
+                <p className="text-xs text-gray-500 font-medium truncate">{a.breed} • {a.age}</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className={`w-2 h-2 rounded-full ${a.vitals?.temperature?.value > 103 ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                  <span className="text-[10px] font-bold text-gray-600">
+                    {a.vitals?.temperature?.value > 103 ? 'Needs Paravet Check' : 'Healthy & Vaccinated'}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
+
     </div>
   );
 }

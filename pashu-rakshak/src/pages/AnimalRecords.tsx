@@ -23,6 +23,12 @@ export default function AnimalRecords() {
   const [newPhone, setNewPhone] = useState('+91 ');
   const [newLocation, setNewLocation] = useState('Navalgund, Dharwad');
 
+  // AI Drug Withdrawal Calculator State
+  const [calcDrug, setCalcDrug] = useState('Ceftiofur Sodium');
+  const [calcWeight, setCalcWeight] = useState(410);
+  const [calcDose, setCalcDose] = useState(12);
+  const [padlockApplied, setPadlockApplied] = useState(false);
+
   const loadAnimals = async (query?: string) => {
     try {
       const list = await api.getAnimals(query);
@@ -424,6 +430,112 @@ export default function AnimalRecords() {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* ── AI Drug Withdrawal & Dairy Safety Calculator ── */}
+          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-primary-950 rounded-3xl p-6 text-white shadow-xl space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                  <Shield size={22} />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg text-white">AI Drug Withdrawal & Residue Safety Calculator</h3>
+                  <p className="text-xs text-slate-300 font-medium">
+                    FSSAI & CODEX Alimentarius Maximum Residue Limit (MRL) Bio-Clearance Engine
+                  </p>
+                </div>
+              </div>
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1 rounded-full text-xs font-black">
+                Dairy Supply Chain Shield
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-xs font-bold text-slate-300 mb-1.5 block">Select Injected Antimicrobial / NSAID</label>
+                <select
+                  value={calcDrug}
+                  onChange={(e) => setCalcDrug(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-3.5 text-xs font-bold text-white outline-none focus:ring-2 focus:ring-emerald-400"
+                >
+                  <option value="Ceftiofur Sodium">Ceftiofur Sodium (Cephalosporin 3rd Gen)</option>
+                  <option value="Oxytetracycline LA">Oxytetracycline LA (Tetracycline)</option>
+                  <option value="Enrofloxacin">Enrofloxacin (Fluoroquinolone)</option>
+                  <option value="Flunixin Meglumine">Flunixin Meglumine (NSAID)</option>
+                  <option value="Meloxicam">Meloxicam (NSAID Anti-inflammatory)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 mb-1.5 block">Specimen Weight (kg)</label>
+                <input
+                  type="number"
+                  value={calcWeight}
+                  onChange={(e) => setCalcWeight(Number(e.target.value))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 px-3.5 text-sm font-mono font-bold text-white outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 mb-1.5 block">Administered Dose (ml)</label>
+                <input
+                  type="number"
+                  value={calcDose}
+                  onChange={(e) => setCalcDose(Number(e.target.value))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 px-3.5 text-sm font-mono font-bold text-white outline-none"
+                />
+              </div>
+            </div>
+
+            {/* AI Calculated Output */}
+            {(() => {
+              const withdrawalHours = calcDrug === 'Oxytetracycline LA' ? 168 : calcDrug === 'Enrofloxacin' ? 96 : calcDrug === 'Flunixin Meglumine' ? 36 : calcDrug === 'Meloxicam' ? 48 : 72;
+              const meatDays = calcDrug === 'Oxytetracycline LA' ? 28 : calcDrug === 'Enrofloxacin' ? 14 : 4;
+              const mrlLimit = calcDrug === 'Enrofloxacin' ? '50 ppb' : calcDrug === 'Meloxicam' ? '15 ppb' : '100 ppb';
+
+              return (
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Required Milk Withdrawal</p>
+                      <p className="text-2xl font-black text-amber-400">{withdrawalHours} Hours</p>
+                      <p className="text-[10px] text-slate-300 font-medium">({Math.ceil(withdrawalHours / 24)} Full Days)</p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Meat Withdrawal Period</p>
+                      <p className="text-2xl font-black text-white">{meatDays} Days</p>
+                      <p className="text-[10px] text-slate-300 font-medium">Tissue clearance</p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">FSSAI / Codex MRL Limit</p>
+                      <p className="text-2xl font-black text-emerald-400">{mrlLimit}</p>
+                      <p className="text-[10px] text-slate-300 font-medium">Safe consumption target</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                    <p className="text-xs text-slate-300 font-medium">
+                      Status: <span className="text-amber-400 font-bold">Milk must not enter dairy collection tank</span> until {withdrawalHours}h post-injection.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPadlockApplied(true);
+                        setTimeout(() => setPadlockApplied(false), 4000);
+                      }}
+                      className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-5 py-2.5 rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-2 transition-all active:scale-95 flex-shrink-0"
+                    >
+                      <ShieldAlert size={16} />
+                      {padlockApplied ? 'Digital Lock Enforced on RFID!' : 'Enforce RFID Dairy Padlock'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

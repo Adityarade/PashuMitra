@@ -38,6 +38,9 @@ export default function ReportDisease() {
   const [herdSize, setHerdSize] = useState('14');
 
   // Step 2: Clinical Signs & Vision
+  const [visionMode, setVisionMode] = useState<'optical' | 'thermal'>('optical');
+  const [acousticMode, setAcousticMode] = useState<'idle' | 'recording' | 'analyzed'>('idle');
+  const [selectedAcousticPattern, setSelectedAcousticPattern] = useState<'brd' | 'stridor' | 'normal'>('brd');
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([
     'fever', 'mouth_ulcers', 'milk_drop', 'frothy_salivation'
   ]);
@@ -372,57 +375,216 @@ export default function ReportDisease() {
       {step === 2 && (
         <div className="space-y-6 animate-fade-in-up">
           
-          {/* AI Vision Diagnostic */}
+          {/* AI Vision Diagnostic & Thermal Scanner */}
           <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap justify-between items-center gap-3">
               <h3 className="flex items-center gap-2 font-bold text-gray-900 text-base">
                 <Camera className="text-primary-700" size={20} />
-                Vision Diagnostic Analysis
+                Dual-Mode AI Vision & Thermal Scanner
               </h3>
-              <span className="bg-primary-50 text-primary-700 border border-primary-200 px-2.5 py-0.5 rounded-full text-xs font-bold">
-                TFLite Edge Model v3.8
-              </span>
+              
+              {/* Dual Mode Switcher */}
+              <div className="flex items-center bg-gray-100 p-1 rounded-2xl border border-gray-200 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setVisionMode('optical')}
+                  className={`px-3 py-1.5 rounded-xl transition-all ${
+                    visionMode === 'optical' 
+                      ? 'bg-white text-gray-900 shadow-sm border border-gray-200' 
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  📷 Optical Lesion AI
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVisionMode('thermal')}
+                  className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
+                    visionMode === 'thermal' 
+                      ? 'bg-red-600 text-white shadow-sm' 
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  🌡️ FLIR Thermal Heatmap
+                </button>
+              </div>
             </div>
 
-            <div className="relative w-full h-56 bg-slate-900 rounded-2xl overflow-hidden shadow-inner">
+            <div className="relative w-full h-64 bg-slate-950 rounded-2xl overflow-hidden shadow-inner">
               <img 
                 src="https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?auto=format&fit=crop&q=80&w=800" 
                 alt="Livestock Snout"
-                className="w-full h-full object-cover opacity-85"
+                className={`w-full h-full object-cover transition-all duration-500 ${
+                  visionMode === 'thermal' 
+                    ? 'filter invert hue-rotate-[240deg] contrast-150 brightness-110 saturate-200' 
+                    : 'opacity-85'
+                }`}
               />
-              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md text-gray-900 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
-                <Brain size={14} className="text-primary-600" />
-                Edge AI Analysis Active
-              </div>
 
-              {/* Bounding box simulation */}
-              <div className="absolute top-[22%] left-[28%] w-[45%] h-[48%] border-2 border-emerald-400 bg-emerald-400/20 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.5)]">
-                <div className="absolute -top-3 -left-0.5 bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded">
-                  VESICULAR LESION: 94.2%
+              {/* Mode Badges */}
+              <div className="absolute top-3 right-3 flex items-center gap-2">
+                <div className="bg-slate-900/80 backdrop-blur-md text-white border border-white/20 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                  <Brain size={13} className="text-emerald-400" />
+                  {visionMode === 'thermal' ? 'Infrared Pyrexia Mesh' : 'Edge Model v3.8'}
                 </div>
               </div>
 
+              {visionMode === 'optical' ? (
+                /* Optical Bounding Box */
+                <div className="absolute top-[22%] left-[28%] w-[45%] h-[48%] border-2 border-emerald-400 bg-emerald-400/20 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.5)]">
+                  <div className="absolute -top-3 -left-0.5 bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded">
+                    VESICULAR LESION: 94.2%
+                  </div>
+                </div>
+              ) : (
+                /* Thermal Hotspots */
+                <>
+                  <div className="absolute top-[28%] left-[34%] bg-red-600/90 text-white font-mono text-[10px] font-black px-2 py-1 rounded-lg border border-red-300 shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse">
+                    Muzzle Mucosa: 105.1°F (High Pyrexia)
+                  </div>
+                  <div className="absolute top-[45%] left-[55%] bg-amber-500/90 text-white font-mono text-[10px] font-black px-2 py-1 rounded-lg border border-amber-200 shadow-md">
+                    Oral Cleft: 104.6°F
+                  </div>
+                  <div className="absolute bottom-16 right-6 bg-blue-900/80 text-blue-200 font-mono text-[10px] px-2 py-0.5 rounded border border-blue-500">
+                    Ambient Baseline: 86.4°F
+                  </div>
+                </>
+              )}
+
               {/* Result Bar */}
-              <div className="absolute bottom-3 left-3 right-3 bg-white/95 backdrop-blur-md rounded-xl p-3 flex items-center justify-between shadow-lg">
+              <div className="absolute bottom-3 left-3 right-3 bg-white/95 backdrop-blur-md rounded-2xl p-3 flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold flex-shrink-0">
                     <Check size={18} />
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900 text-xs sm:text-sm leading-tight">Epithelial Vesicles & Drooling Detected</p>
-                    <p className="text-[11px] text-gray-500 font-medium">Verified by IVRI Visual Diagnostic Standard</p>
+                    <p className="font-bold text-gray-900 text-xs sm:text-sm leading-tight">
+                      {visionMode === 'thermal' 
+                        ? 'Thermal Gradient Confirms Systemic Pyrexia (>104.5°F Hotspot)' 
+                        : 'Epithelial Vesicles & Salivation Lesions Identified'}
+                    </p>
+                    <p className="text-[11px] text-gray-500 font-medium">
+                      {visionMode === 'thermal' ? 'Radiometric Infrared Sensor Simulation' : 'IVRI Neural Pattern Standard'}
+                    </p>
                   </div>
                 </div>
                 <button 
+                  type="button"
                   onClick={() => {
                     setAnalyzingImage(true);
                     setTimeout(() => setAnalyzingImage(false), 800);
                   }}
-                  className="bg-primary-50 border border-primary-200 text-primary-800 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-primary-100 flex items-center gap-1"
+                  className="bg-primary-50 border border-primary-200 text-primary-800 text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-primary-100 flex items-center gap-1"
                 >
                   <RefreshCw size={12} className={analyzingImage ? 'animate-spin' : ''} /> Rescan
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* ── PashuSuno AI: Bio-Acoustic Respiratory & Cough Diagnostic ── */}
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="flex flex-wrap justify-between items-center gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold">
+                  <Activity size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-base leading-tight">
+                    PashuSuno AI: Bio-Acoustic Cough & Respiration Analyzer
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium">
+                    Acoustic frequency analysis for early Bovine Respiratory Disease (BRD) & pneumonia
+                  </p>
+                </div>
+              </div>
+
+              <span className="bg-indigo-50 text-indigo-800 border border-indigo-200 text-[11px] font-black px-2.5 py-0.5 rounded-full">
+                Spectral Mel-Acoustic
+              </span>
+            </div>
+
+            {/* Acoustic Sample Selector */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              {[
+                { id: 'brd', label: 'Bronchial Wheeze / Cough (BRD)', freq: '840 Hz', confidence: '92.4%' },
+                { id: 'stridor', label: 'Tracheal Stridor / Grunt', freq: '620 Hz', confidence: '87.1%' },
+                { id: 'normal', label: 'Normal Vesicular Respiration', freq: '310 Hz', confidence: '96.0%' }
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedAcousticPattern(opt.id as any);
+                    setAcousticMode('analyzed');
+                  }}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                    selectedAcousticPattern === opt.id && acousticMode === 'analyzed'
+                      ? 'bg-indigo-700 text-white border-indigo-700 shadow-sm'
+                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Visualizer Waveform Bar */}
+            <div className="p-4 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4 flex-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAcousticMode(acousticMode === 'recording' ? 'analyzed' : 'recording');
+                    if (acousticMode !== 'recording') {
+                      setTimeout(() => setAcousticMode('analyzed'), 1200);
+                    }
+                  }}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-xs transition-all flex-shrink-0 ${
+                    acousticMode === 'recording'
+                      ? 'bg-red-500 animate-pulse text-white'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md'
+                  }`}
+                >
+                  {acousticMode === 'recording' ? '...' : '▶ Listen'}
+                </button>
+
+                <div className="flex-1">
+                  <div className="flex items-center gap-1 h-9 mb-1">
+                    {[...Array(28)].map((_, i) => (
+                      <div
+                        key={i}
+                        className={`w-1 rounded-full transition-all ${
+                          acousticMode === 'recording'
+                            ? 'bg-indigo-400 animate-pulse'
+                            : selectedAcousticPattern === 'normal'
+                              ? 'bg-emerald-400'
+                              : 'bg-amber-400'
+                        }`}
+                        style={{
+                          height: `${15 + Math.sin(i * 0.6) * 14 + (acousticMode === 'recording' ? Math.random() * 25 : 8)}%`
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-gray-400 font-mono">
+                    Spectrogram Bandwidth: 100 Hz – 4.2 kHz • Zero Latency Audio Edge Buffer
+                  </p>
+                </div>
+              </div>
+
+              {acousticMode === 'analyzed' && (
+                <div className="bg-white/10 border border-white/20 rounded-xl p-3 text-right">
+                  <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">Acoustic Diagnosis</p>
+                  <p className="text-sm font-black text-white">
+                    {selectedAcousticPattern === 'brd' 
+                      ? 'BRD Acute Wheeze (92.4%)' 
+                      : selectedAcousticPattern === 'stridor' 
+                        ? 'Laryngeal Stridor (87.1%)' 
+                        : 'Clear Lung Fields (Normal)'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

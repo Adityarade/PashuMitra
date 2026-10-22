@@ -6,6 +6,7 @@ import {
   Globe, ChevronDown, Home
 } from 'lucide-react';
 import { useLang } from '../context/LangContext';
+import AIPashuSahayak from './AIPashuSahayak';
 
 type LangCode = 'en' | 'hi' | 'mr';
 
@@ -198,6 +199,9 @@ export default function Layout() {
         <main className="flex-1 w-full pt-4 pb-24 md:pb-6">
           <Outlet />
         </main>
+
+        {/* Global AI Pashu Sahayak Assistant */}
+        <AIPashuSahayak />
       </div>
 
       {/* Mobile-only Floating Action Buttons */}
